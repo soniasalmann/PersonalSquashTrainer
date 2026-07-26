@@ -1,0 +1,36 @@
+# Virtual Environment
+venv/
+.venv/
+ENV/
+env/
+
+# Model weights (large files)
+*.pt
+models/
+yolov8m-pose.pt
+yolov8n.pt
+
+# Output directories & reports
+output_videos/
+output_reports/
+*.log
+
+# Input videos (ignore large video files)
+input_videos/*.mp4
+input_videos/*.MOV
+input_videos/*.avi
+
+# Python cache & compiler output
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor / OS metadata
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

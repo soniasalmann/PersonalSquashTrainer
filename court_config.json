@@ -1,0 +1,21 @@
+{
+    "back_wall_left": [
+        9,
+        766
+    ],
+    "back_wall_right": [
+        469,
+        746
+    ],
+    "front_wall_left": [
+        138,
+        462
+    ],
+    "front_wall_right": [
+        376,
+        458
+    ],
+    "is_half_court": true,
+    "court_length_m": 4.26,
+    "notes": "Untwisted correct quad order: 1. Bottom-Left [9, 766], 2. Bottom-Right [469, 746], 3. Top-Left [138, 462], 4. Top-Right [376, 458]"
+}
