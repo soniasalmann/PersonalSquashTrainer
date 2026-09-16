@@ -12,6 +12,12 @@ from trackers.squash_player_tracker import SquashPlayerTracker
 from trackers.squash_ball_tracker import SquashBallTracker
 from utils.squash_analytics import SquashAnalytics
 from drawers.squash_drawers import SquashDrawers
+from utils.squash_ai_coach import (
+    get_coaching_insights,
+    build_markdown_report,
+    build_html_report,
+    build_text_report
+)
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Squash Personal Trainer - Video Analysis Pipeline")
@@ -28,6 +34,8 @@ def parse_args():
     parser.add_argument("--gpu", choices=["auto", "force", "cpu"], default="auto", help="GPU usage: auto (detect), force (require), cpu (disable)")
     parser.add_argument("--export-preview", action="store_true", help="Save a short preview clip (default 10s) for sharing")
     parser.add_argument("--preview-length", type=int, default=10, help="Length of preview video in seconds (used with --export-preview)")
+    # Generative AI Coach flag
+    parser.add_argument("--gemini-key", type=str, default=None, help="Google Gemini API key for GenAI coaching insights (or set GEMINI_API_KEY env var)")
     return parser.parse_args()
 
 def transcode_to_h264(temp_path, output_path):
@@ -323,7 +331,11 @@ def main():
 
     cap.release()
     out_writer.release()
-    cv2.destroyAllWindows()
+    if not args.no_preview:
+        try:
+            cv2.destroyAllWindows()
+        except Exception:
+            pass
     print("\n[Pass 2] Complete!")
     
     # Write preview video if requested
@@ -339,89 +351,50 @@ def main():
     # Transcode temp mp4v output to H.264
     transcode_to_h264(temp_output_path, args.output)
 
-    # Save Session Summary Report (Markdown and Text formats)
+    # Save Session Summary Reports (Markdown, HTML, and Text formats)
     report_path = args.output.replace(".mp4", "_report.txt")
     md_report_path = args.output.replace(".mp4", "_report.md")
+    html_report_path = args.output.replace(".mp4", "_report.html")
     
-    avg_speed = float(np.mean(player_speeds_kmh))
-    peak_speed = float(np.max(player_speeds_kmh))
+    avg_speed = float(np.mean(player_speeds_kmh)) if len(player_speeds_kmh) > 0 else 0.0
+    peak_speed = float(np.max(player_speeds_kmh)) if len(player_speeds_kmh) > 0 else 0.0
     num_lunges = len(lunge_frames)
     num_strikes = len(strikes)
     duration_sec = total_frames / fps
     dist_per_shot = total_distance / max(1, num_strikes)
 
-    # 1. Generate text report
-    with open(report_path, 'w', encoding='utf-8') as rf:
-        rf.write("==================================================\n")
-        rf.write("          SQUASH PERSONAL TRAINER REPORT          \n")
-        rf.write("==================================================\n\n")
-        rf.write(f"Source Video: {args.video_path}\n")
-        rf.write(f"Total Duration Analyzed: {duration_sec:.1f} seconds\n\n")
-        rf.write("WORKOUT METRICS:\n")
-        rf.write(f"- Total Distance Covered: {total_distance:.2f} meters\n")
-        rf.write(f"- Average Speed: {avg_speed:.2f} km/h\n")
-        rf.write(f"- Peak Speed: {peak_speed:.2f} km/h\n")
-        rf.write(f"- Total Lunges Detected: {num_lunges}\n\n")
-        rf.write("TACTICAL METRICS:\n")
-        rf.write(f"- Total Shots Hit: {num_strikes}\n")
-        rf.write(f"- T-Recovery Rate: {t_recovery_rate:.1f}%\n")
-        rf.write("\n==================================================\n")
+    # 1. Compile objective session metrics dictionary
+    session_metrics = {
+        "duration_sec": duration_sec,
+        "total_distance_m": float(total_distance),
+        "avg_speed_kmh": avg_speed,
+        "peak_speed_kmh": peak_speed,
+        "num_lunges": num_lunges,
+        "num_strikes": num_strikes,
+        "dist_per_shot": float(dist_per_shot),
+        "t_recovery_rate": float(t_recovery_rate)
+    }
 
-    # 2. Generate a beautiful Markdown report with coaching tips
+    # 2. Query AI Squash Coach (Google Gemini with seamless rule-based fallback)
+    coaching_result = get_coaching_insights(session_metrics, api_key=args.gemini_key)
+
+    # 3. Write plain text report
+    with open(report_path, 'w', encoding='utf-8') as rf:
+        rf.write(build_text_report(session_metrics, coaching_result, args.video_path))
+
+    # 4. Write structured Markdown report
     with open(md_report_path, 'w', encoding='utf-8') as rf:
-        rf.write(f"# 🏆 Squash Performance Report\n\n")
-        rf.write(f"**Source Video:** `{os.path.basename(args.video_path)}` | **Session Length:** `{duration_sec:.1f} seconds` \n\n")
-        
-        rf.write("## 📊 Session Metrics\n\n")
-        rf.write("| Metric | Value | Status |\n")
-        rf.write("| :--- | :--- | :--- |\n")
-        rf.write(f"| 🎯 **Total Shots Hit** | `{num_strikes}` | - |\n")
-        
-        t_status = "🟢 Excellent" if t_recovery_rate >= 70 else "🟡 Moderate" if t_recovery_rate >= 40 else "🔴 Action Required"
-        rf.write(f"| ⏱️ **T-Recovery Rate** | `{t_recovery_rate:.1f}%` | {t_status} |\n")
-        
-        rf.write(f"| 🏃 **Total Distance** | `{total_distance:.2f} m` | - |\n")
-        rf.write(f"| ⚡ **Average / Peak Speed** | `{avg_speed:.1f} / {peak_speed:.1f} km/h` | - |\n")
-        rf.write(f"| 🦵 **Lunges Completed** | `{num_lunges}` | - |\n\n")
-        
-        rf.write("## 💡 Coaching & Improvement Tips\n\n")
-        
-        # T-Recovery Feedback
-        rf.write("### ⏱️ T-Zone Recovery\n")
-        if t_recovery_rate >= 70:
-            rf.write("- **Feedback:** Excellent court positioning! You are dominating the T-Zone, which keeps your opponent under constant pressure.\n")
-        elif t_recovery_rate >= 40:
-            rf.write("- **Feedback:** Decent positioning, but you are occasionally getting stuck in the corners after hitting. \n")
-            rf.write("- **Action Tip:** Focus on taking a explosive side-step back to the T immediately after completing your swing.\n")
-        else:
-            rf.write("- **Feedback:** Critical positioning gap. You are staying in the corners, leaving the entire court open for your opponent.\n")
-            rf.write("- **Action Tip:** Practice ghosting drills focusing solely on hitting a shot and backpedaling immediately to the T.\n")
-        rf.write("\n")
-        
-        # Movement Efficiency
-        rf.write("### 🏃 Movement Efficiency\n")
-        if dist_per_shot > 4.5:
-            rf.write(f"- **Feedback:** You are covering a high distance per shot (`{dist_per_shot:.1f} meters`). This suggests you may be reacting late to the ball.\n")
-            rf.write("- **Action Tip:** Work on your anticipation, court positioning, and early racket preparation to reduce unnecessary running.\n")
-        else:
-            rf.write("- **Feedback:** Good movement economy! You are covering court space efficiently.\n")
-        rf.write("\n")
-        
-        # Biomechanics & Lunges
-        rf.write("### 🦵 Biomechanics & Injury Prevention\n")
-        if num_lunges > 0:
-            rf.write("- **Feedback:** Open the output video and check your knee angles during the annotated lunges.\n")
-            rf.write("- **Action Tip:** Ensure your lunging knee joint never drops below 90 degrees. Collapsing past 90 degrees puts high strain on your patella and slows down your recovery push-off.\n")
-        else:
-            rf.write("- **Feedback:** No lunges detected. Work on getting lower on low corner balls instead of bending from the waist.\n")
-            
-        rf.write("\n---\n*Report generated by Squash Personal Trainer MVP.*")
+        rf.write(build_markdown_report(session_metrics, coaching_result, args.video_path))
+
+    # 5. Write interactive HTML5 report
+    with open(html_report_path, 'w', encoding='utf-8') as rf:
+        rf.write(build_html_report(session_metrics, coaching_result, args.video_path))
 
     print(f"\n[Pipeline Finished] Successfully completed analysis!")
     print(f"Processed Video Saved: {args.output}")
     print(f"Text Summary Saved:     {report_path}")
     print(f"Interactive MD Report:  {md_report_path}")
-    print(f"Summary Report Saved:   {report_path}")
+    print(f"Interactive HTML Report:{html_report_path}")
 
 if __name__ == "__main__":
     main()

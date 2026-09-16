@@ -2,7 +2,27 @@
 
 An end-to-end computer vision and deep learning pipeline that transforms raw squash practice or match footage into real-world biomechanical insights and tactical coaching feedback.
 
-Squash Trainer acts as an automated personal coach, calculating player speed (km/h), distance covered, lunge counts, and T-recovery metrics. The system calibrates camera perspective angles using planar homography, tracks movements with advanced state estimation, and generates visual HUD overlays alongside top-down court positioning minimaps.
+Squash Trainer acts as an automated personal coach, calculating player speed (km/h), distance covered, lunge counts, and T-recovery metrics. The system calibrates camera perspective angles using planar homography, tracks movements with advanced state estimation, renders live HUD video overlays, and leverages a **Generative AI Coach Layer (Google Gemini)** to turn physical measurements into targeted, personalized training programs.
+
+> 💡 **Core Principle:** *"Computer vision measures what the player actually did; Generative AI turns those measurements into personalized coaching and training recommendations."*
+
+---
+
+## 🏛️ Pipeline Architecture
+
+```
+Raw Squash Video (.mp4)
+         ↓
+Computer Vision Engine (Ultralytics YOLOv8-Pose + Custom Ball Detector)
+         ↓
+Kinematics & Spatial Geometry (Planar Homography 6.4m × 9.75m + 2D Kalman Filter)
+         ↓
+Objective Session Telemetry Dictionary (Speed, Distance, Lunges, T-Recovery %, Dist/Shot)
+         ↓
+AI Squash Coach (Google Gemini 2.5 Flash with Strict Structured JSON Schema)
+         ↓  [Automatic Fallback to Offline Heuristic Engine if offline/keyless]
+Comprehensive Multi-Format Session Dashboards (.html, .md, .txt)
+```
 
 ---
 
@@ -13,7 +33,9 @@ Squash Trainer acts as an automated personal coach, calculating player speed (km
 * 🦵 **Automated Pose & Lunge Detection:** Monitors 17 keypoint joint coordinates frame-by-frame using deep pose models to evaluate footwork intensity and count lunges.
 * 🎯 **T-Zone Recovery Tracking:** Automatically evaluates player recovery rates by measuring how consistently and quickly the player returns to the central T-zone after executing shots.
 * 🗺️ **Live HUD Overlay & Minimap:** Renders real-time metrics, fading ball trajectory paths, player tracking trails, and a top-down court position map onto the output video.
-* 📊 **Coaching Suggestions Report:** Generates clean post-session HTML dashboards and text summaries with targeted, data-driven coaching recommendations.
+* 🤖 **Generative AI Coach Layer (Google Gemini):** Synthesizes objective session measurements into actionable tactical feedback, strengths/weaknesses breakdowns, playing style archetypes, and custom prescribed training drills.
+* 🛡️ **Zero-Failure Fallback Guarantee:** If `GEMINI_API_KEY` is not provided, or in cases of network drops/timeouts, the pipeline automatically falls back to deterministic rule-based coaching heuristics so processing never crashes.
+* 📊 **Multi-Format Reports:** Generates interactive dark-themed HTML dashboards, structured Markdown reports, and plain-text summaries.
 
 ---
 
@@ -29,10 +51,11 @@ Standard off-the-shelf object detection models often fail to track a tiny, high-
 ## 🛠️ Tech Stack
 
 * **Computer Vision & AI:** Ultralytics YOLOv8-Pose (Player Tracking), Custom YOLO Ball Detector, PyTorch
+* **Generative AI Layer:** Google Gemini Flash (`google-genai` / `google-generativeai`), Structured JSON Schema Decoding
 * **Model Training & Data Pipeline:** Google Colab (GPU Acceleration), Roboflow (Custom Dataset)
 * **Kinematics & Math:** Planar Homography Transformation, Kalman Filtering, NumPy, SciPy
 * **Video Engine & HUD:** OpenCV Video Processing, Dynamic HUD & Court Minimap Overlay
-* **Analytics & Reporting:** Custom HTML5/CSS3 Dashboards, Markdown Generators
+* **Analytics & Reporting:** HTML5/CSS3 Interactive Dashboards, Markdown Generators
 
 ---
 
@@ -43,6 +66,7 @@ squashtrainer/
 ├── squash_main.py            # Main entrypoint running the 2-pass streaming pipeline
 ├── court_config.json         # Court line pixel calibration coordinates configuration
 ├── calibrate_court.py        # Utility to interactively find court coordinates
+├── requirements.txt          # Python package dependencies
 ├── trackers/
 │   ├── squash_ball_tracker.py   # Custom Kalman filter-based ball tracking
 │   └── squash_player_tracker.py # Pose tracking and joint angle calculations
@@ -50,7 +74,8 @@ squashtrainer/
 │   └── squash_drawers.py        # Renders player pose, ball tails, HUD, and 2D court minimap
 ├── utils/
 │   ├── court_calibrator.py      # Spatial coordinate homography mappings (pixels -> meters)
-│   └── squash_analytics.py      # Speed, distance, lunge, and T-recovery calculations
+│   ├── squash_analytics.py      # Speed, distance, lunge, and T-recovery calculations
+│   └── squash_ai_coach.py       # GenAI Coach (Gemini JSON engine + fallback + report formatters)
 └── output_videos/               # Processed videos, HTML reports, and summaries (auto-generated)
 ```
 
@@ -58,11 +83,11 @@ squashtrainer/
 
 ## 🚀 Getting Started
 
-### 1. Requirements
+### 1. Requirements & Installation
 
-Ensure you have the required packages installed in your Python environment:
+Ensure you have Python 3.10+ installed:
 ```bash
-pip install opencv-python ultralytics torch numpy scipy
+pip install -r requirements.txt
 ```
 
 ### 2. Model Weights
@@ -73,7 +98,17 @@ Create a `models/` folder in the project directory and place your weights files 
 
 *Note: If the `models/` folder or weights are missing, the pipeline will fall back to downloading and using default weights.*
 
-### 3. Usage
+### 3. Google Gemini Setup (Optional for GenAI Coach)
+
+To enable the Generative AI coaching layer, set your Gemini API key in your environment:
+```powershell
+$env:GEMINI_API_KEY="your-google-gemini-api-key"
+```
+Or pass it directly via `--gemini-key "your-key"`.
+
+*If omitted, the system seamlessly runs offline using the built-in deterministic heuristic coaching engine.*
+
+### 4. Running the Pipeline
 
 Run the main pipeline script from your terminal:
 ```bash
@@ -89,12 +124,20 @@ python squash_main.py "path/to/your/input_video.mp4" --config court_config.json 
 * `--scale`: Rescale input video resolution (e.g., `0.5` for 50% scale processing).
 * `--export-preview`: Exports a short preview clip of the output.
 * `--preview-length`: Duration of the exported preview clip in seconds (default: `10`).
+* `--gemini-key`: Google Gemini API key (optional; defaults to `GEMINI_API_KEY` environment variable).
 
 ---
 
 ## 📊 Session Analytics Reports
 
 After the pipeline completes processing, it saves three summary report files detailing session performance:
-1. **Interactive HTML Report:** `output_videos/processed_output_report.html` — A styled, dark-themed dashboard summarizing workout metrics, tactical stats, and automated coach recommendations.
-2. **Markdown Report:** `output_videos/processed_output_report.md` — A structured markdown file containing metrics and suggestions.
-3. **Text Summary:** `output_videos/processed_output_report.txt` — A clean plain-text log.
+1. **Interactive HTML Report:** `output_videos/processed_output_report.html` — A responsive dashboard with metric cards, style classification, strengths, weaknesses, and custom drill plans.
+2. **Structured Markdown Report:** `output_videos/processed_output_report.md` — Clearly divides **Part 1: Objective CV Metrics** and **Part 2: AI Squash Coach Insights**.
+3. **Text Summary:** `output_videos/processed_output_report.txt` — Plain-text session log.
+
+### Example AI Coaching Output (Structured Training Plan)
+
+| Drill Name | Duration | Sets / Reps | Target Focus | Data-Driven Justification |
+| :--- | :--- | :--- | :--- | :--- |
+| **Ghosting: Deep Corner to T-Split Step** | `12 minutes` | `3 sets x 8 reps` | Explosive first recovery step back to T | *Observed T-recovery rate of 44.4% indicates delay recovering from corners.* |
+| **Early Preparation & Linear Footwork Routine** | `12 minutes` | `3 sets x 6 minutes` | Direct diagonal lines & early racket prep | *Player averaged 5.58m per shot, signaling inefficient travel paths.* |
