@@ -98,6 +98,9 @@ class SquashDrawers:
         Draws a top-down minimap of the squash court showing player and ball positions.
         """
         f_h, f_w = frame.shape[:2]
+        # In vertical / narrow videos, skip minimap overlay to avoid blocking the court and player
+        if f_w < 350:
+            return frame
         
         # Minimap ROI bounds (Top Right Corner)
         x_start = f_w - width - margin
@@ -105,14 +108,7 @@ class SquashDrawers:
         x_end = f_w - margin
         y_end = margin + height
         
-        # Create semi-transparent overlay
-        overlay = frame.copy()
-        cv2.rectangle(overlay, (x_start, y_start), (x_end, y_end), (30, 30, 30), -1)
-        # Apply overlay with alpha=0.85
-        cv2.addWeighted(overlay, 0.85, frame, 0.15, 0, frame)
-        
-        # Draw map outline
-        cv2.rectangle(frame, (x_start, y_start), (x_end, y_end), (200, 200, 200), 2, cv2.LINE_AA)
+        # Draw map outline with subtle thin lines (no dark/grey filled box)
         
         # Helper to map meter coordinates to minimap pixel space
         def meter_to_pixel(x_m, y_m):
@@ -173,36 +169,23 @@ class SquashDrawers:
 
         return frame
 
+    def _draw_clean_text(self, frame, text, pos, scale=0.42, color=(255, 255, 255), thickness=1):
+        """Draws clean broadcast-style text with dark outline, without any intrusive background box."""
+        x, y = pos
+        cv2.putText(frame, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, scale, (0, 0, 0), thickness + 2, cv2.LINE_AA)
+        cv2.putText(frame, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, scale, color, thickness, cv2.LINE_AA)
+
     def draw_hud_metrics(self, frame, speed_kmh, lunge_count, t_rate, current_frame, fps):
-        """Draws current training metrics (speed, lunges, T-recovery rate) in a HUD box."""
-        # Top-left HUD box
-        x_start, y_start = 20, 20
-        width, height = 240, 110
+        """Draws current training metrics cleanly on the frame without any intrusive black/grey boxes."""
+        x_start, y_start = 14, 18
         
-        # Transparent background box
-        overlay = frame.copy()
-        cv2.rectangle(overlay, (x_start, y_start), (x_start + width, y_start + height), (40, 40, 40), -1)
-        cv2.addWeighted(overlay, 0.75, frame, 0.25, 0, frame)
-        cv2.rectangle(frame, (x_start, y_start), (x_start + width, y_start + height), (120, 120, 120), 1, cv2.LINE_AA)
+        self._draw_clean_text(frame, "SQUASH PERSONAL TRAINER", (x_start, y_start + 12), 0.42, (0, 255, 0), 1)
+        self._draw_clean_text(frame, f"Speed: {speed_kmh:.1f} km/h", (x_start, y_start + 30), 0.40, self.text_color, 1)
+        self._draw_clean_text(frame, f"Lunges Completed: {lunge_count}", (x_start, y_start + 48), 0.40, self.text_color, 1)
+        self._draw_clean_text(frame, f"T-Recovery Rate: {t_rate:.1f}%", (x_start, y_start + 66), 0.40, self.text_color, 1)
         
-        # Render text metrics
-        cv2.putText(frame, "SQUASH PERSONAL TRAINER", (x_start + 10, y_start + 20), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 1, cv2.LINE_AA)
-        
-        cv2.putText(frame, f"Speed: {speed_kmh:.1f} km/h", (x_start + 10, y_start + 45), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.text_color, 1, cv2.LINE_AA)
-                    
-        cv2.putText(frame, f"Lunges Completed: {lunge_count}", (x_start + 10, y_start + 65), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.text_color, 1, cv2.LINE_AA)
-                    
-        cv2.putText(frame, f"T-Recovery Rate: {t_rate:.1f}%", (x_start + 10, y_start + 85), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.text_color, 1, cv2.LINE_AA)
-                    
-        # Timer / Time stamp
-        total_sec = current_frame / fps
+        total_sec = current_frame / fps if fps > 0 else 0
         mins = int(total_sec // 60)
         secs = int(total_sec % 60)
-        cv2.putText(frame, f"Time: {mins:02d}:{secs:02d}", (x_start + 10, y_start + 102), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.35, (180, 180, 180), 1, cv2.LINE_AA)
-
+        self._draw_clean_text(frame, f"Time: {mins:02d}:{secs:02d}", (x_start, y_start + 82), 0.35, (180, 220, 255), 1)
         return frame
