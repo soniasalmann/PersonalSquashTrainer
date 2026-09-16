@@ -4,6 +4,7 @@ An end-to-end computer vision and deep learning pipeline that transforms raw squ
 
 Squash Trainer acts as an automated personal coach, calculating player speed (km/h), distance covered, lunge counts, and T-recovery metrics. The system calibrates camera perspective angles using planar homography, tracks movements with advanced state estimation, renders live HUD video overlays, and leverages a **Generative AI Coach Layer (Google Gemini)** to turn physical measurements into targeted, personalized training programs.
 
+> 🌐 **Live Interactive Web Demo:** [soniasalmann.github.io/PersonalSquashTrainer](https://soniasalmann.github.io/PersonalSquashTrainer/)  
 > 💡 **Core Principle:** *"Computer vision measures what the player actually did; Generative AI turns those measurements into personalized coaching and training recommendations."*
 
 ---
