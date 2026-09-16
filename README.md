@@ -108,7 +108,19 @@ Or pass it directly via `--gemini-key "your-key"`.
 
 *If omitted, the system seamlessly runs offline using the built-in deterministic heuristic coaching engine.*
 
-### 4. Running the Pipeline
+### 4. Interactive Web App (Dual-Mode Browser Interface)
+
+Launch the interactive web application:
+```bash
+python app.py
+```
+This opens an interactive interface with two testing options:
+* **Option 1: Pre-loaded Sample Video (1-Click Test):** Test the entire pipeline immediately on the included practice drill with pre-calibrated court homography.
+* **Option 2: Upload Your Own Video:** Drag-and-drop any squash video (.mp4/.mov) to analyze your own game and receive personalized AI coaching recommendations.
+
+---
+
+### 5. Running via Command Line (CLI)
 
 Run the main pipeline script from your terminal:
 ```bash
