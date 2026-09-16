@@ -127,7 +127,7 @@ custom_css = """
 }
 """
 
-with gr.Blocks(title="Squash Personal Trainer — AI Coaching System", css=custom_css, theme=gr.themes.Soft()) as demo:
+with gr.Blocks(title="Squash Personal Trainer — AI Coaching System") as demo:
     gr.HTML("""
     <div class="hero-box">
         <h1>🎾 Squash Personal Trainer</h1>
@@ -188,4 +188,5 @@ with gr.Blocks(title="Squash Personal Trainer — AI Coaching System", css=custo
 
 if __name__ == "__main__":
     # Launch with public share link enabled so others can test remotely via a URL!
-    demo.launch(server_name="0.0.0.0", server_port=7860, share=False)
+    # Set share=True to generate a temporary public gradio.live URL for remote users.
+    demo.launch(server_name="0.0.0.0", server_port=7860, share=False, theme=gr.themes.Soft(), css=custom_css)
