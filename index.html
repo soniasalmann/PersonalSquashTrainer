@@ -314,14 +314,8 @@
             <span class="badge badge-green">v1.2 MVP Live</span>
         </div>
 
-        <!-- Mode Navigation Tabs -->
-        <div class="tabs-nav">
-            <button class="tab-btn active" onclick="switchTab('sample-tab')">⭐ Option 1: Sample Drill Analysis (1-Click Demo)</button>
-            <button class="tab-btn" onclick="switchTab('upload-tab')">📤 Option 2: Test Your Own Squash Video</button>
-        </div>
-
-        <!-- TAB 1: SAMPLE DEMO -->
-        <div id="sample-tab" class="tab-content active">
+        <!-- Analysis Showcase -->
+        <div id="sample-tab">
             
             <!-- Objective Telemetry Strip across Top -->
             <div class="telemetry-strip">
@@ -450,86 +444,11 @@
             </div>
         </div>
 
-        <!-- TAB 2: UPLOAD & TEST CUSTOM VIDEO -->
-        <div id="upload-tab" class="tab-content">
-            <div class="main-grid">
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">🎥 Test Your Own Video</span>
-                        <span class="badge badge-blue">Local File Loader</span>
-                    </div>
-
-                    <div class="upload-dropzone" onclick="document.getElementById('file-input').click()">
-                        <div style="font-size:2.5rem; margin-bottom:10px;">📤</div>
-                        <h3 style="font-size:1.1rem; color:#fff; margin-bottom:6px;">Drag and drop your squash video here</h3>
-                        <p style="color:var(--text-muted); font-size:0.85rem;">Supports .mp4, .mov, or .avi practice drills</p>
-                        <input type="file" id="file-input" accept="video/*" style="display:none" onchange="handleFileSelect(event)">
-                    </div>
-
-                    <div id="custom-player-box" style="display:none; margin-top:20px;">
-                        <h4 style="font-size:0.95rem; margin-bottom:10px; color:var(--accent-green);">Loaded Video Preview:</h4>
-                        <div class="video-box">
-                            <video id="custom-video-element" controls playsinline></video>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">📐 How Court Calibration Works</span>
-                        <span class="badge badge-green">Planar Homography</span>
-                    </div>
-
-                    <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px;">
-                        Because camera angles differ from court to court, the system uses a 4-point homography calibration to calculate real-world meters from camera pixels:
-                    </p>
-
-                    <div style="background:rgba(15,23,42,0.8); border:1px solid var(--border-color); border-radius:8px; padding:16px; margin-bottom:20px;">
-                        <div style="font-weight:700; color:var(--accent-blue); margin-bottom:8px; font-size:0.9rem;">To run on your custom video via CLI:</div>
-                        <pre style="color:#e2e8f0; font-size:0.85rem; overflow-x:auto; background:#0b0f19; padding:12px; border-radius:6px;"><code># 1. Calibrate corners for your video (click 4 corners)
-python calibrate_court.py "path/to/my_video.mp4"
-
-# 2. Run analysis with AI Coach
-python squash_main.py "path/to/my_video.mp4" --config court_config.json</code></pre>
-                    </div>
-
-                    <h4 style="font-size:0.95rem; color:#fff; margin-bottom:8px;">🚀 Run Full Match Analysis</h4>
-                    <p style="font-size:0.88rem; color:var(--text-muted); line-height:1.5;">
-                        Clone the repository to process full-length match and drill footage with your GPU:
-                    </p>
-                    <a href="https://github.com/soniasalmann/PersonalSquashTrainer" target="_blank" class="btn btn-primary" style="margin-top:12px;">
-                        👉 View Source Code on GitHub
-                    </a>
-                </div>
-            </div>
-        </div>
-
         <!-- Footer -->
         <footer>
             <p>Squash Personal Trainer &bull; Computer Vision &bull; Planar Homography &bull; Google Gemini Generative AI</p>
             <p style="margin-top:6px; color:#64748b;">Created by Sonia Salman &bull; Licensed under MIT</p>
         </footer>
     </div>
-
-    <script>
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
-            event.target.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
-        }
-
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const videoURL = URL.createObjectURL(file);
-                const videoEl = document.getElementById('custom-video-element');
-                videoEl.src = videoURL;
-                document.getElementById('custom-player-box').style.display = 'block';
-                videoEl.play();
-            }
-        }
-    </script>
 </body>
 </html>
